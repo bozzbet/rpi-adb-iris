@@ -1,58 +1,75 @@
 #!/data/data/com.termux/files/usr/bin/bash
+set -e
 
+# ===============================
+# Environment
+# ===============================
 export PREFIX=/data/data/com.termux/files/usr
 export HOME=/data/data/com.termux/files/home
-export PATH=$PREFIX/bin:$PATH
+export PATH="$PREFIX/bin:$PATH"
 
-#LOG="$HOME/ccminerd/log/ccminer.log"
+BASE_DIR="$HOME/ccminerd"
 PIDFILE="$HOME/ccminer.pid"
-#MAX_LINES=50
 
-# Ensure log directory exists
-#mkdir -p "$(dirname "$LOG")"
+# ===============================
+# Find config folder
+# ===============================
+CONFIG_DIRS=$(find "$BASE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.git' | wc -l)
 
-# Stop existing miner if running
-if [ -f "$PIDFILE" ] && ps -p "$(cat "$PIDFILE")" >/dev/null 2>&1; then
-    kill "$(cat "$PIDFILE")"
-    sleep 2
+if [ "$CONFIG_DIRS" -eq 0 ]; then
+  echo "[✗] No miner config folder found in $BASE_DIR"
+  exit 1
 fi
 
+if [ "$CONFIG_DIRS" -gt 1 ]; then
+  echo "[✗] Multiple miner config folders found:"
+  find "$BASE_DIR" -mindepth 1 -maxdepth 1 -type d
+  echo "Refusing to start. Only ONE config folder is allowed per phone."
+  exit 1
+fi
+
+MINER_DIR=$(find "$BASE_DIR" -mindepth 1 -maxdepth 1 -type d)
+CONFIG_FILE="$MINER_DIR/config.json"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "[✗] Missing config.json in $MINER_DIR"
+  exit 1
+fi
+
+MINER_NAME=$(basename "$MINER_DIR")
+
+# ===============================
+# Stop existing miner
+# ===============================
+if [ -f "$PIDFILE" ] && ps -p "$(cat "$PIDFILE")" >/dev/null 2>&1; then
+  echo "[*] Stopping existing miner"
+  kill "$(cat "$PIDFILE")"
+  sleep 2
+fi
+
+# ===============================
 # Keep CPU awake
+# ===============================
 termux-wake-lock
 
-cd "$HOME/ccminerd"
+cd "$BASE_DIR"
 
-# Start miner (append logs in real time)
-#nohup "$HOME/ccminerd/ccminer" \
-#  -c "$HOME/ccminerd/config.json" \
-#  >"$LOG" 2>&1 &
+# ===============================
+# Start miner (fake TTY)
+# ===============================
+echo "[*] Starting miner: $MINER_NAME"
 
-# Clear old log once on start (important)
-#: > "$LOG"
-
-# Start miner with fake TTY (CRITICAL)
-script -q -c "./ccminer -c config.json" & # "$LOG" &
+script -q -c "./ccminer -c \"$CONFIG_FILE\"" &
 PID=$!
+
 echo "$PID" > "$PIDFILE"
 
-# Background log trimmer (keeps last 50 lines)
-#(
-#  while kill -0 "$PID" 2>/dev/null; do
-#    echo "[log-trim] $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG"
-    # Trim log to last N lines
-#    tail -n "$MAX_LINES" "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
-     
-#    sleep 10
-#  done
-#) &
-
-
-
-#PID=$!
-#echo "$PID" > "$PIDFILE"
-
-printf '\nMining started.\n'
-printf '===============\n'
-#printf 'Log file: %s\n' "$LOG"
-printf 'PID: %s\n\n' "$PID"
-
+# ===============================
+# Status
+# ===============================
+echo
+echo "Mining started"
+echo "=============="
+echo "Miner: $MINER_NAME"
+echo "PID:   $PID"
+echo
