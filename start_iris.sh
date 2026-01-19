@@ -99,7 +99,9 @@ while true; do
   START_TS=$(date +%s)
 
   echo "[*] Launching ccminer..."
-  script -q -c "./ccminer -c \"$CONFIG_FILE\"" >> "$LOGFILE" 2>&1 &
+  # script -q -c "./ccminer -c \"$CONFIG_FILE\"" >> "$LOGFILE" 2>&1 &
+  script -q -f -c "./ccminer -c \"$CONFIG_FILE\"" "$LOGFILE" &
+
   PID=$!
 
   echo "$PID" > "$PIDFILE"
