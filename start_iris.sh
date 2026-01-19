@@ -15,6 +15,9 @@ LOGFILE="$BASE_DIR/ccminer.log"
 RESTART_DELAY=10          # seconds before restart
 MAX_RUNTIME=0             # 0 = disabled, otherwise seconds
 
+LOG_MAX_SIZE=$((10 * 1024 * 1024))   # 10 MB
+LOG_BACKUPS=3
+
 # ===============================
 # Find config folder (EXACTLY ONE)
 # ===============================
@@ -62,9 +65,37 @@ echo "[*] Config: $CONFIG_FILE"
 echo
 
 # ===============================
+# Maintain LogSize
+# ===============================
+
+rotate_log() {
+  [ -f "$LOGFILE" ] || return 0
+
+  SIZE=$(stat -c %s "$LOGFILE" 2>/dev/null || wc -c < "$LOGFILE")
+
+  if [ "$SIZE" -lt "$LOG_MAX_SIZE" ]; then
+    return 0
+  fi
+
+  echo "[*] Rotating log (size=${SIZE} bytes)"
+
+  i=$LOG_BACKUPS
+  while [ "$i" -gt 0 ]; do
+    if [ -f "$LOGFILE.$i" ]; then
+      mv "$LOGFILE.$i" "$LOGFILE.$((i+1))"
+    fi
+    i=$((i - 1))
+  done
+
+  mv "$LOGFILE" "$LOGFILE.1"
+  : > "$LOGFILE"
+}
+
+# ===============================
 # Watchdog loop
 # ===============================
 while true; do
+  rotate_log
   START_TS=$(date +%s)
 
   echo "[*] Launching ccminer..."
