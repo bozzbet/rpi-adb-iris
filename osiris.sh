@@ -10,13 +10,9 @@ export PATH="$PREFIX/bin:$PATH"
 
 BASE_DIR="$HOME/ccminerd"
 PIDFILE="$HOME/ccminer.pid"
-#LOGFILE="$BASE_DIR/ccminer.log"
 
 RESTART_DELAY=10          # seconds before restart
 MAX_RUNTIME=0             # 0 = disabled, otherwise seconds
-
-#LOG_MAX_SIZE=$((10 * 1024 * 1024))   # 10 MB
-#LOG_BACKUPS=3
 
 # ===============================
 # Find config folder (EXACTLY ONE)
@@ -65,44 +61,13 @@ echo "[*] Config: $CONFIG_FILE"
 echo
 
 # ===============================
-# Maintain LogSize
-# ===============================
-
-#rotate_log() {
-#  [ -f "$LOGFILE" ] || return 0
-
-#  SIZE=$(stat -c %s "$LOGFILE" 2>/dev/null || wc -c < "$LOGFILE")
-
-#  if [ "$SIZE" -lt "$LOG_MAX_SIZE" ]; then
-#    return 0
-#  fi
-
-#  echo "[*] Rotating log (size=${SIZE} bytes)"
-
-#  i=$LOG_BACKUPS
-#  while [ "$i" -gt 0 ]; do
-#    if [ -f "$LOGFILE.$i" ]; then
-#      mv "$LOGFILE.$i" "$LOGFILE.$((i+1))"
-#    fi
-#    i=$((i - 1))
-#  done
-
-#  mv "$LOGFILE" "$LOGFILE.1"
-#  : > "$LOGFILE"
-#}
-
-# ===============================
 # Watchdog loop
 # ===============================
 while true; do
-#  rotate_log
   START_TS=$(date +%s)
 
   echo "[*] Launching ccminer..."
-  # script -q -c "./ccminer -c \"$CONFIG_FILE\"" >> "$LOGFILE" 2>&1 &
-  # script -q -f -c "./ccminer -c \"$CONFIG_FILE\"" "$LOGFILE" &
-  ccminer -c $CONFIG_FILE
-
+  ./ccminer -c "$CONFIG_FILE" &
   PID=$!
 
   echo "$PID" > "$PIDFILE"
@@ -114,10 +79,6 @@ while true; do
   RUNTIME=$((END_TS - START_TS))
 
   echo "[!] ccminer exited (code=$EXIT_CODE, runtime=${RUNTIME}s)"
-
-  if [ "$MAX_RUNTIME" -gt 0 ] && [ "$RUNTIME" -ge "$MAX_RUNTIME" ]; then
-    echo "[*] Max runtime reached — restarting miner"
-  fi
 
   sleep "$RESTART_DELAY"
 done
