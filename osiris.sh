@@ -67,7 +67,8 @@ while true; do
   START_TS=$(date +%s)
 
   echo "[*] Launching ccminer..."
-  ./ccminer -c "$CONFIG_FILE" &
+  #./ccminer -c "$CONFIG_FILE" &
+  script -q -f -c "./ccminer -c \"$CONFIG_FILE\"" &
   PID=$!
 
   echo "$PID" > "$PIDFILE"
