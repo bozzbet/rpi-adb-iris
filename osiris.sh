@@ -1,5 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
-set -euo pipefail
+
+set -e
+#set -euo pipefail
 
 # ===============================
 # Environment
